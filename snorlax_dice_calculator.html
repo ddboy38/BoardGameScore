@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>잠만보 다이스 게임 점수판</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .player-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .player-controls label {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .player-controls input {
+            width: 80px;
+            padding: 8px;
+            font-size: 1.1em;
+            text-align: center;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+        }
+        
+        .player-controls button {
+            padding: 10px 20px;
+            font-size: 1em;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .player-controls button:hover {
+            background: #5568d3;
+        }
+        
+        .score-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            overflow-x: auto;
+            display: block;
+        }
+        
+        table {
+            width: 100%;
+            min-width: 600px;
+        }
+        
+        th, td {
+            border: 2px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        
+        .category-cell {
+            background: #f8f9fa;
+            font-weight: bold;
+            text-align: left;
+            padding-left: 15px;
+            min-width: 150px;
+        }
+        
+        .score-cell {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 1.2em;
+            cursor: pointer;
+            background: white;
+            transition: all 0.2s;
+            user-select: none;
+            font-weight: bold;
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .score-cell:hover {
+            background: #f0f4ff;
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+        
+        .score-cell:active {
+            transform: scale(0.95);
+        }
+        
+        .score-cell.empty {
+            color: #ccc;
+        }
+        
+        .score-cell.filled {
+            color: #333;
+            background: #e8f5e9;
+        }
+        
+        .total-row {
+            background: #fff3cd;
+            font-weight: bold;
+        }
+        
+        .bonus-row {
+            background: #d1ecf1;
+            font-weight: bold;
+        }
+        
+        .section-divider {
+            height: 3px;
+            background: #667eea;
+        }
+        
+        .grand-total-row {
+            background: #d4edda;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .total-cell {
+            font-size: 1.1em;
+            color: #333;
+        }
+        
+        .point-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-left: 5px;
+        }
+        
+        .category-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333;
+            display: block;
+            margin-bottom: 3px;
+        }
+        
+        .category-desc {
+            font-size: 0.9em;
+            font-weight: normal;
+            color: #555;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐻 잠만보 다이스 게임</h1>
+        <p class="subtitle">점수 계산기</p>
+        
+        <div class="player-controls">
+            <label for="playerCount">플레이어 수:</label>
+            <input type="number" id="playerCount" min="1" max="8" value="2">
+            <button onclick="updatePlayers()">적용</button>
+        </div>
+        
+        <div class="score-table">
+            <table id="scoreTable">
+                <thead>
+                    <tr>
+                        <th class="category-cell">카테고리</th>
+                    </tr>
+                </thead>
+                <tbody id="scoreBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const categories = {
+            upper: [
+                { id: 'ones', title: '에이스', name: '모든 잠만보들의 합 <span class="point-label">(0~5점)</span>', multiplier: 1, maxCount: 5 },
+                { id: 'twos', title: '듀스', name: '모든 2들의 합 <span class="point-label">(0~10점)</span>', multiplier: 2, maxCount: 5 },
+                { id: 'threes', title: '트레이', name: '모든 3들의 합 <span class="point-label">(0~15점)</span>', multiplier: 3, maxCount: 5 },
+                { id: 'fours', title: '포', name: '모든 4들의 합 <span class="point-label">(0~20점)</span>', multiplier: 4, maxCount: 5 },
+                { id: 'fives', title: '파이브', name: '모든 5들의 합 <span class="point-label">(0~25점)</span>', multiplier: 5, maxCount: 5 },
+                { id: 'sixes', title: '식스', name: '모든 6들의 합 <span class="point-label">(0~30점)</span>', multiplier: 6, maxCount: 5 }
+            ],
+            lower: [
+                { id: 'fourKind', title: '포 다이스', name: '4개가 같을 때', fixed: 25 },
+                { id: 'twoPairPlusOne', title: '풀 하우스', name: '2개가 같고 나머지 3개가 같을 때', fixed: 25 },
+                { id: 'fourSequence', title: '스몰 스트레이트', name: '4개가 연속된 숫자일 때', fixed: 15 },
+                { id: 'fiveSequence', title: '라지 스트레이트', name: '5개가 연속된 숫자일 때', fixed: 30 },
+                { id: 'fiveKind', title: '요트', name: '모두 같을 때', fixed: 50 },
+                { id: 'allOnes', title: '잠만보!', name: '모두 잠만보일 때', fixed: 100 }
+            ]
+        };
+
+        // 각 플레이어의 현재 상태를 저장
+        const playerStates = {};
+
+        function initializePlayerState(playerNum) {
+            if (!playerStates[playerNum]) {
+                playerStates[playerNum] = {};
+                
+                // 상단 초기화 (각각 -1로 시작, -1은 빈 상태)
+                categories.upper.forEach(cat => {
+                    playerStates[playerNum][cat.id] = -1;
+                });
+                
+                // 하단 초기화 (각각 -1로 시작)
+                categories.lower.forEach(cat => {
+                    playerStates[playerNum][cat.id] = -1;
+                });
+            }
+        }
+
+        function createScoreTable() {
+            const playerCount = parseInt(document.getElementById('playerCount').value);
+            const thead = document.querySelector('#scoreTable thead tr');
+            const tbody = document.getElementById('scoreBody');
+            
+            // 플레이어 상태 초기화
+            for (let i = 1; i <= playerCount; i++) {
+                initializePlayerState(i);
+            }
+            
+            // 헤더 생성
+            thead.innerHTML = '<th class="category-cell">카테고리</th>';
+            for (let i = 1; i <= playerCount; i++) {
+                thead.innerHTML += `<th>플레이어 ${i}</th>`;
+            }
+            
+            // 바디 초기화
+            tbody.innerHTML = '';
+            
+            // 상단 섹션
+            categories.upper.forEach(cat => {
+                const row = createScoreRow(cat, playerCount, 'upper');
+                tbody.appendChild(row);
+            });
+            
+            // 상단 합계
+            const upperTotalRow = document.createElement('tr');
+            upperTotalRow.className = 'total-row';
+            upperTotalRow.innerHTML = `<td class="category-cell">상단 합계</td>`;
+            for (let i = 1; i <= playerCount; i++) {
+                upperTotalRow.innerHTML += `<td class="total-cell" id="upperTotal_${i}">0</td>`;
+            }
+            tbody.appendChild(upperTotalRow);
+            
+            // 보너스
+            const bonusRow = document.createElement('tr');
+            bonusRow.className = 'bonus-row';
+            bonusRow.innerHTML = `<td class="category-cell">63점 이상 보너스 <span class="point-label">(35점)</span></td>`;
+            for (let i = 1; i <= playerCount; i++) {
+                bonusRow.innerHTML += `<td class="total-cell" id="bonus_${i}">0</td>`;
+            }
+            tbody.appendChild(bonusRow);
+            
+            // 구분선
+            const divider = document.createElement('tr');
+            divider.innerHTML = `<td colspan="${playerCount + 1}" class="section-divider"></td>`;
+            tbody.appendChild(divider);
+            
+            // 하단 섹션
+            categories.lower.forEach(cat => {
+                const row = createScoreRow(cat, playerCount, 'lower');
+                tbody.appendChild(row);
+            });
+            
+            // 하단 합계
+            const lowerTotalRow = document.createElement('tr');
+            lowerTotalRow.className = 'total-row';
+            lowerTotalRow.innerHTML = `<td class="category-cell">하단 합계</td>`;
+            for (let i = 1; i <= playerCount; i++) {
+                lowerTotalRow.innerHTML += `<td class="total-cell" id="lowerTotal_${i}">0</td>`;
+            }
+            tbody.appendChild(lowerTotalRow);
+            
+            // 총 합계
+            const grandTotalRow = document.createElement('tr');
+            grandTotalRow.className = 'grand-total-row';
+            grandTotalRow.innerHTML = `<td class="category-cell">총 합계</td>`;
+            for (let i = 1; i <= playerCount; i++) {
+                grandTotalRow.innerHTML += `<td class="total-cell" id="grandTotal_${i}">0</td>`;
+            }
+            tbody.appendChild(grandTotalRow);
+            
+            // 모든 플레이어의 합계 계산
+            for (let i = 1; i <= playerCount; i++) {
+                calculateTotals(i);
+            }
+        }
+        
+        function createScoreRow(cat, playerCount, section) {
+            const row = document.createElement('tr');
+            // 하단만 pointLabel 추가
+            const pointLabel = section === 'lower' ? ` <span class="point-label">(0점 / ${cat.fixed}점)</span>` : '';
+            
+            const displayName = cat.title 
+                ? `<span class="category-title">${cat.title}</span><span class="category-desc">${cat.name}${pointLabel}</span>`
+                : cat.name + pointLabel;
+            
+            row.innerHTML = `<td class="category-cell">${displayName}</td>`;
+            
+            for (let i = 1; i <= playerCount; i++) {
+                const cellId = `${cat.id}_${i}`;
+                row.innerHTML += `
+                    <td>
+                        <div class="score-cell empty" id="${cellId}" onclick="cycleScore('${cat.id}', ${i}, '${section}')">
+                            -
+                        </div>
+                    </td>
+                `;
+            }
+            
+            return row;
+        }
+        
+        function cycleScore(catId, playerNum, section) {
+            initializePlayerState(playerNum);
+            
+            const currentState = playerStates[playerNum][catId];
+            let newState;
+            let displayValue;
+            let scoreValue;
+            
+            if (section === 'upper') {
+                // 상단: - → 0 → 1 → 2 → 3 → 4 → 5 → -
+                const cat = categories.upper.find(c => c.id === catId);
+                const maxCount = cat.maxCount;
+                
+                if (currentState === -1) {
+                    newState = 0;
+                } else if (currentState >= maxCount) {
+                    newState = -1;
+                } else {
+                    newState = currentState + 1;
+                }
+                
+                if (newState === -1) {
+                    displayValue = '-';
+                    scoreValue = 0;
+                } else {
+                    scoreValue = newState * cat.multiplier;
+                    displayValue = scoreValue;
+                }
+            } else {
+                // 하단: - → 0 → 점수 → -
+                const cat = categories.lower.find(c => c.id === catId);
+                
+                if (currentState === -1) {
+                    newState = 0;
+                    displayValue = '0';
+                    scoreValue = 0;
+                } else if (currentState === 0) {
+                    newState = 1;
+                    displayValue = cat.fixed;
+                    scoreValue = cat.fixed;
+                } else {
+                    newState = -1;
+                    displayValue = '-';
+                    scoreValue = 0;
+                }
+            }
+            
+            // 상태 저장
+            playerStates[playerNum][catId] = newState;
+            
+            // UI 업데이트
+            const cell = document.getElementById(`${catId}_${playerNum}`);
+            cell.textContent = displayValue;
+            
+            if (newState === -1) {
+                cell.classList.add('empty');
+                cell.classList.remove('filled');
+            } else {
+                cell.classList.remove('empty');
+                cell.classList.add('filled');
+            }
+            
+            // 합계 재계산
+            calculateTotals(playerNum);
+        }
+        
+        function calculateTotals(playerNum) {
+            let upperTotal = 0;
+            
+            // 상단 합계
+            categories.upper.forEach(cat => {
+                const state = playerStates[playerNum][cat.id];
+                if (state >= 0) {
+                    upperTotal += state * cat.multiplier;
+                }
+            });
+            
+            // 하단 합계
+            let lowerTotal = 0;
+            categories.lower.forEach(cat => {
+                const state = playerStates[playerNum][cat.id];
+                if (state === 1) {
+                    lowerTotal += cat.fixed;
+                }
+            });
+            
+            // 보너스 계산
+            const bonus = upperTotal >= 63 ? 35 : 0;
+            
+            // 총 합계
+            const grandTotal = upperTotal + bonus + lowerTotal;
+            
+            // 업데이트
+            document.getElementById(`upperTotal_${playerNum}`).textContent = upperTotal;
+            document.getElementById(`bonus_${playerNum}`).textContent = bonus;
+            document.getElementById(`lowerTotal_${playerNum}`).textContent = lowerTotal;
+            document.getElementById(`grandTotal_${playerNum}`).textContent = grandTotal;
+        }
+        
+        function updatePlayers() {
+            createScoreTable();
+        }
+        
+        // 초기 테이블 생성
+        createScoreTable();
+    </script>
+</body>
+</html>
